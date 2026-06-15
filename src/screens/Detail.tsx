@@ -4,6 +4,7 @@ import { Avatar, PctRing } from "../components/Avatar";
 import { Icon } from "../components/Icon";
 import type { OpenDish } from "../components/FeedGrid";
 import { DISHES, photo } from "../data";
+import { useDishVote, effectivePct, VOTE_THRESHOLD } from "../lib/votes";
 import { OrderSheet } from "../sheets/OrderSheet";
 import type { Dish } from "../types";
 
@@ -28,6 +29,8 @@ export function DetailScreen({ dish, saved, zoom, onBack, onToggleSave, onOpen, 
   const alike = DISHES.filter((d) => d.tag === dish.tag && d.id !== dish.id).slice(0, 3);
   const strip = more.length ? more : alike;
   const isSaved = saved.has(dish.id);
+  const vote = useDishVote(dish.id);
+  const { pct, real } = effectivePct(dish.pct, vote.total, vote.up);
   const [toast, setToast] = useState<string | null>(null);
   const [ordering, setOrdering] = useState(false);
   const toastTimer = useRef<number>(0);
@@ -77,19 +80,54 @@ export function DetailScreen({ dish, saved, zoom, onBack, onToggleSave, onOpen, 
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: "var(--r)", background: "var(--sunken)", marginBottom: 18 }}>
-            <PctRing pct={dish.pct} />
-            <div style={{ flex: 1 }}>
-              <div className="m-second" style={{ fontWeight: 700 }}>{dish.pct}% would order again</div>
-              <div className="m-caption" style={{ color: "var(--ink-2)" }}>from {37 + dish.pct} diners who ate this</div>
-            </div>
-            <div style={{ display: "flex" }}>
-              {dish.reviews.slice(0, 3).map((r, i) => (
-                <div key={i} style={{ marginLeft: i ? -8 : 0 }}>
-                  <Avatar name={r.who} size={28} ring />
+          <div style={{ padding: "12px 14px", borderRadius: "var(--r)", background: "var(--sunken)", marginBottom: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <PctRing pct={pct} />
+              <div style={{ flex: 1 }}>
+                <div className="m-second" style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  {pct}% would order again
+                  {!real && (
+                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.4, color: "var(--accent)", background: "rgba(194,73,43,.12)", borderRadius: 99, padding: "2px 7px" }}>
+                      EARLY READ
+                    </span>
+                  )}
                 </div>
-              ))}
+                <div className="m-caption" style={{ color: "var(--ink-2)" }}>
+                  {real ? `from ${vote.total} diners who voted` : "based on web ratings — vote to make it real"}
+                </div>
+              </div>
+              <div style={{ display: "flex" }}>
+                {dish.reviews.slice(0, 3).map((r, i) => (
+                  <div key={i} style={{ marginLeft: i ? -8 : 0 }}>
+                    <Avatar name={r.who} size={28} ring />
+                  </div>
+                ))}
+              </div>
             </div>
+            {vote.canVote && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+                <div className="m-caption" style={{ flex: 1, color: "var(--ink-2)", fontWeight: 700 }}>Would you order it again?</div>
+                <button
+                  className="m-btn m-btn-quiet"
+                  style={{ flex: "none", minHeight: 38, padding: "0 14px", color: vote.myVote === true ? "var(--accent)" : "var(--ink)", borderColor: vote.myVote === true ? "var(--accent)" : undefined }}
+                  aria-pressed={vote.myVote === true}
+                  onClick={() => vote.cast(true)}
+                >
+                  Yes
+                </button>
+                <button
+                  className="m-btn m-btn-quiet"
+                  style={{ flex: "none", minHeight: 38, padding: "0 14px", color: vote.myVote === false ? "var(--ink)" : "var(--ink-2)", fontWeight: vote.myVote === false ? 800 : undefined }}
+                  aria-pressed={vote.myVote === false}
+                  onClick={() => vote.cast(false)}
+                >
+                  No
+                </button>
+              </div>
+            )}
+            {real && vote.total < VOTE_THRESHOLD + 3 && (
+              <div className="m-caption" style={{ color: "var(--ink-3)", marginTop: 8 }}>Real diner votes — still early, so it'll keep shifting.</div>
+            )}
           </div>
 
           <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>

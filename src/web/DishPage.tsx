@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Avatar, PctRing } from "../components/Avatar";
 import { Icon } from "../components/Icon";
 import { DISHES, byId, photo } from "../data";
+import { useDishVote, effectivePct } from "../lib/votes";
 import { Card } from "./Card";
 import { href } from "./router";
 
@@ -15,6 +16,7 @@ interface DishPageProps {
 export function DishPage({ id, saved, onToggleSave }: DishPageProps) {
   const dish = byId(id);
   const [toast, setToast] = useState<string | null>(null);
+  const vote = useDishVote(id);
   if (!dish) {
     return (
       <div className="w-wrap w-empty">
@@ -26,6 +28,7 @@ export function DishPage({ id, saved, onToggleSave }: DishPageProps) {
     );
   }
   const isSaved = saved.has(dish.id);
+  const { pct, real } = effectivePct(dish.pct, vote.total, vote.up);
   const more = DISHES.filter((d) => d.rest === dish.rest && d.id !== dish.id).slice(0, 3);
   const alike = DISHES.filter((d) => d.tag === dish.tag && d.id !== dish.id).slice(0, 4);
   const strip = more.length ? more : alike;
@@ -58,11 +61,20 @@ export function DishPage({ id, saved, onToggleSave }: DishPageProps) {
             </span>
           </div>
 
-          <div className="w-stat-row" style={{ marginBottom: 20 }}>
-            <PctRing pct={dish.pct} />
+          <div className="w-stat-row" style={{ marginBottom: vote.canVote ? 12 : 20 }}>
+            <PctRing pct={pct} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{dish.pct}% would order again</div>
-              <div style={{ color: "var(--ink-2)", fontSize: 13 }}>from {37 + dish.pct} diners who ate this</div>
+              <div style={{ fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                {pct}% would order again
+                {!real && (
+                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.4, color: "var(--accent)", background: "rgba(194,73,43,.12)", borderRadius: 99, padding: "2px 7px" }}>
+                    EARLY READ
+                  </span>
+                )}
+              </div>
+              <div style={{ color: "var(--ink-2)", fontSize: 13 }}>
+                {real ? `from ${vote.total} diners who voted` : "based on web ratings — vote to make it real"}
+              </div>
             </div>
             <div style={{ display: "flex" }}>
               {dish.reviews.slice(0, 3).map((r, i) => (
@@ -72,6 +84,17 @@ export function DishPage({ id, saved, onToggleSave }: DishPageProps) {
               ))}
             </div>
           </div>
+          {vote.canVote && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <span style={{ color: "var(--ink-2)", fontSize: 14, fontWeight: 700 }}>Would you order it again?</span>
+              <button className="w-btn w-btn-quiet" style={{ color: vote.myVote === true ? "var(--accent)" : undefined }} aria-pressed={vote.myVote === true} onClick={() => vote.cast(true)}>
+                Yes
+              </button>
+              <button className="w-btn w-btn-quiet" style={{ fontWeight: vote.myVote === false ? 800 : undefined }} aria-pressed={vote.myVote === false} onClick={() => vote.cast(false)}>
+                No
+              </button>
+            </div>
+          )}
 
           <div className="w-actions" style={{ marginBottom: 28 }}>
             <button className="w-btn w-btn-quiet" style={{ color: isSaved ? "var(--accent)" : undefined }} onClick={() => onToggleSave(dish.id)}>

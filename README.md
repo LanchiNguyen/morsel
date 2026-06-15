@@ -100,9 +100,14 @@ grouping into collections does not yet).
 - **Dishes are really places.** Google Places has no per-dish concept, so each
   card is a place (its name, primary type, and a headline photo). True
   dish-level discovery needs a dish-aware source or user-generated content.
-- **"% would order again" is derived** from Google's 1–5 star rating
-  (`round(rating/5 × 100)`) — a stand-in for Morsel's real metric, which only
-  becomes genuine once diners report it. Trending uses `userRatingCount`.
+- **"% would order again" starts derived, then goes real.** With no user base
+  yet, a dish's number is computed from Google's 1–5 rating
+  (`round(rating/5 × 100)`) and shown with an **EARLY READ** badge. Every
+  signed-in diner gets a one-tap *"Would you order it again?"* vote (stored in
+  `dish_votes`); once a dish passes `VOTE_THRESHOLD` real votes
+  (`src/lib/votes.ts`), the genuine crowd percentage replaces the derived one
+  automatically — no migration. Only aggregate tallies are public
+  (`dish_vote_counts` view); individual votes stay private under RLS.
 - **Location** defaults to DC coordinates in `api/dishes.ts`; wire the app's
   location input through to the `lat`/`lng`/`term` query params to make the feed
   follow the user.
