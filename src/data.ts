@@ -13,10 +13,16 @@ import type { Cuisine, Collection, Dish } from "./types";
 
 /**
  * Resolve a dish image to a URL.
- * - Seed rows store a bare Unsplash photo id → proxied + resized via wsrv.nl.
- * - Real rows store an absolute URL (https://…) → returned as-is.
+ * - Google Places photo reference ("places/…/photos/…") → through /api/photo,
+ *   which proxies the bytes so the API key never reaches the browser.
+ * - An absolute URL (https://…) → returned as-is.
+ * - A bare Unsplash photo id (seed rows) → proxied + resized via wsrv.nl.
  */
 export function photo(id: string, w = 700): string {
+  if (id.startsWith("places/") && id.includes("/photos/")) {
+    const base = import.meta.env.VITE_API_BASE ?? "";
+    return `${base}/api/photo?name=${encodeURIComponent(id)}&w=${w}`;
+  }
   if (/^https?:\/\//i.test(id)) return id;
   return `https://wsrv.nl/?url=images.unsplash.com/photo-${id}&w=${w}&q=72`;
 }
