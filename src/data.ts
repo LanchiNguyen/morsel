@@ -1,13 +1,27 @@
-// Morsel — seed data, set in Washington DC / the DMV.
-// Photos proxy Unsplash via wsrv.nl (direct Unsplash is often rate-limited).
-// In production these become licensed/UGC dish photos with a consistent crop.
+// Morsel — data layer.
+//
+// The arrays below (DISHES, CUISINES, TREND, …) are the live data the whole app
+// reads. They start out holding the bundled DC/DMV *seed* and, when a real
+// Supabase project is configured, `hydrate()` (called once at bootstrap in
+// main.tsx) replaces their contents with rows from the database. Because these
+// are ESM `let` exports, every screen that already does `import { DISHES }`
+// transparently sees the live data with no further change.
+//
+// Photos proxy Unsplash via wsrv.nl for the seed (direct Unsplash is often
+// rate-limited). Real rows carry their own absolute image URLs — see `photo()`.
 import type { Cuisine, Collection, Dish } from "./types";
 
+/**
+ * Resolve a dish image to a URL.
+ * - Seed rows store a bare Unsplash photo id → proxied + resized via wsrv.nl.
+ * - Real rows store an absolute URL (https://…) → returned as-is.
+ */
 export function photo(id: string, w = 700): string {
+  if (/^https?:\/\//i.test(id)) return id;
   return `https://wsrv.nl/?url=images.unsplash.com/photo-${id}&w=${w}&q=72`;
 }
 
-export const DISHES: Dish[] = [
+export const SEED_DISHES: Dish[] = [
   { id: "d01", img: "1565299624946-b28f40a0ae38", h: 1.25, name: "Margherita, Blistered", rest: "Elder & Ash", hood: "Shaw", price: "$19", dist: "0.4 mi", walk: "8 min walk", tag: "Pizza", pct: 96,
     reviews: [
       { who: "Mia", img: 12, text: "Leopard-spotted crust, molten center. Worth the line down 8th." },
@@ -75,9 +89,9 @@ export const DISHES: Dish[] = [
 ];
 
 // Hero rotation for the feed — the most photogenic five.
-export const HERO_IDS = ["d08", "d01", "d11", "d16", "d04"];
+export const SEED_HERO_IDS = ["d08", "d01", "d11", "d16", "d04"];
 
-export const CUISINES: Cuisine[] = [
+export const SEED_CUISINES: Cuisine[] = [
   { key: "pizza", label: "Pizza", img: "1565299624946-b28f40a0ae38" },
   { key: "sushi", label: "Sushi", img: "1579871494447-9811cf80d66c" },
   { key: "noodles", label: "Noodles", img: "1569718212165-3a8278d5f624" },
@@ -94,20 +108,107 @@ export const CUISINES: Cuisine[] = [
 
 export const DIETS = ["No restrictions", "Vegetarian", "Vegan", "Pescatarian", "Gluten-free", "Dairy-free", "Halal", "Kosher", "Nut allergy"];
 
-export const DEFAULT_COLLECTIONS: Collection[] = [
+export const SEED_COLLECTIONS: Collection[] = [
   { id: "c1", name: "Date night", dishes: ["d14", "d22", "d08", "d26"] },
   { id: "c2", name: "Cheap eats", dishes: ["d12", "d04", "d21", "d25"] },
   { id: "c3", name: "Hill brunch", dishes: ["d07", "d17", "d23", "d12"] },
 ];
 
-// Saves this week — mock momentum, deliberately NOT correlated with pct:
+// Saves this week — seed momentum, deliberately NOT correlated with pct:
 // a few mid-tier dishes are spiking, some all-time greats are quiet.
-// Trending = saves * (pct / 100).
-export const TREND: Record<string, number> = {
+// Trending = saves * (pct / 100). With a live DB this is recomputed from the
+// `saves_week` column, which a real product backfills from actual saves.
+export const SEED_TREND: Record<string, number> = {
   d16: 212, d21: 186, d18: 174, d05: 160, d24: 151, d09: 138, d01: 122,
   d11: 117, d04: 96, d07: 88, d25: 84, d13: 79, d17: 74, d08: 71,
   d22: 64, d03: 58, d12: 55, d20: 52, d14: 47, d02: 44, d15: 41,
   d23: 36, d10: 33, d26: 28, d19: 24, d06: 21,
 };
 
+// ── Live bindings ──────────────────────────────────────────────────────────
+// These hold the seed until `hydrate()` swaps in real rows. Consumers import
+// these (not the SEED_* originals), so a successful hydrate updates the whole
+// app. Reassigning a `let` export is observed by importers via ESM live bindings.
+export let DISHES: Dish[] = SEED_DISHES;
+export let CUISINES: Cuisine[] = SEED_CUISINES;
+export let HERO_IDS: string[] = SEED_HERO_IDS;
+export let DEFAULT_COLLECTIONS: Collection[] = SEED_COLLECTIONS;
+export let TREND: Record<string, number> = SEED_TREND;
+
 export const byId = (id: string | null): Dish | undefined => DISHES.find((d) => d.id === id);
+
+/**
+ * Pull live data from Supabase, if configured, and replace the seed in place.
+ * Safe to call unconditionally: with no project wired up it's a no-op, and any
+ * fetch error leaves the seed intact (the app never shows an empty feed).
+ * Call once before the first render.
+ */
+export async function hydrate(): Promise<void> {
+  // Cheap env check first so demo builds never pull in the Supabase client chunk.
+  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) return;
+  const { supabase } = await import("./lib/supabase");
+  if (!supabase) return; // demo mode — keep the seed
+
+  const [dishesRes, cuisinesRes, collectionsRes] = await Promise.all([
+    supabase
+      .from("dishes")
+      .select("id,img,h,name,rest,hood,price,dist,walk,tag,pct,hero,hero_order,saves_week,reviews(who,img,text)"),
+    supabase.from("cuisines").select("key,label,img,sort").order("sort"),
+    supabase
+      .from("collections")
+      .select("id,name,sort,collection_dishes(dish_id,sort)")
+      .order("sort"),
+  ]);
+
+  if (dishesRes.error) throw dishesRes.error;
+  const rows = dishesRes.data ?? [];
+  if (!rows.length) return; // empty DB — keep the seed rather than blank the app
+
+  DISHES = rows.map((r): Dish => ({
+    id: r.id,
+    img: r.img,
+    h: Number(r.h),
+    name: r.name,
+    rest: r.rest,
+    hood: r.hood,
+    price: r.price,
+    dist: r.dist,
+    walk: r.walk,
+    tag: r.tag,
+    pct: Number(r.pct),
+    reviews: ((r.reviews as { who: string; img: number; text: string }[] | null) ?? []).map((v) => ({
+      who: v.who,
+      img: Number(v.img),
+      text: v.text,
+    })),
+  }));
+
+  TREND = Object.fromEntries(rows.map((r) => [r.id, Number(r.saves_week) || 0]));
+
+  // Heroes: explicitly flagged rows by `hero_order`, else fall back to the
+  // five highest-trending dishes so the feed always has a hero rotation.
+  const flagged = rows
+    .filter((r) => r.hero)
+    .sort((a, b) => (Number(a.hero_order) || 0) - (Number(b.hero_order) || 0))
+    .map((r) => r.id);
+  HERO_IDS = flagged.length
+    ? flagged
+    : [...DISHES]
+        .sort((a, b) => (TREND[b.id] || 0) * (b.pct / 100) - (TREND[a.id] || 0) * (a.pct / 100))
+        .slice(0, 5)
+        .map((d) => d.id);
+
+  if (!cuisinesRes.error && cuisinesRes.data?.length) {
+    CUISINES = cuisinesRes.data.map((c): Cuisine => ({ key: c.key, label: c.label, img: c.img }));
+  }
+
+  if (!collectionsRes.error && collectionsRes.data?.length) {
+    DEFAULT_COLLECTIONS = collectionsRes.data.map((c): Collection => ({
+      id: c.id,
+      name: c.name,
+      dishes: ((c.collection_dishes as { dish_id: string; sort: number }[] | null) ?? [])
+        .sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0))
+        .map((cd) => cd.dish_id),
+    }));
+  }
+}

@@ -6,3 +6,11 @@ dist/
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Local environment (secrets / project keys)
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel

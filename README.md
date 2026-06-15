@@ -30,8 +30,55 @@ npm run build    # type-check + bundle to dist/
 npm run preview  # serve the production build
 ```
 
+With no configuration the app runs in **demo mode** against the bundled DC/DMV
+seed — no backend needed. To run it against a real database, see **Data &
+going live** below.
+
 `vite.config.ts` uses a relative `base`, so the static `dist/` deploys from a
 domain root or any sub-path (e.g. a GitHub Pages project site).
+
+## Data & going live
+
+Morsel reads its catalog through the live bindings in `src/data.ts`
+(`DISHES`, `CUISINES`, `TREND`, `DEFAULT_COLLECTIONS`, `HERO_IDS`). At startup
+`hydrate()` (called in both `src/main.tsx` and `src/web/main.tsx`) does one of
+two things:
+
+- **No Supabase env vars** → keeps the bundled seed. The app works fully
+  offline and the Supabase client is tree-shaken out of the build.
+- **Env vars present** → fetches rows from your Postgres and swaps them in
+  before the first render. Any fetch error falls back to the seed, so the feed
+  is never blank.
+
+The browser talks to Postgres directly through Supabase; **row level security**
+(`supabase/schema.sql`) is what makes the public anon key safe to ship — there
+is no server of our own to host.
+
+### Take it live (Supabase + Vercel)
+
+1. **Create a Supabase project** (free tier) at supabase.com.
+2. In the SQL editor, run `supabase/schema.sql`, then `supabase/seed.sql` to
+   load the starter catalog. (`npm run gen:seed` regenerates `seed.sql` from
+   the TypeScript seed, so the two never drift.)
+3. **Local:** `cp .env.example .env.local` and fill in `VITE_SUPABASE_URL` and
+   `VITE_SUPABASE_ANON_KEY` from Supabase → Settings → API. `npm run dev` now
+   runs live against your DB.
+4. **Deploy:** import the repo into Vercel (it auto-detects Vite via
+   `vercel.json`) and set the same two env vars in Project → Settings →
+   Environment Variables. Each push deploys.
+
+### Next phase (designed for, not yet wired)
+
+- **Accounts + cloud saves.** Saves/collections persist to `localStorage` today
+  (per-device). `supabase/schema.sql` already includes a `saved_dishes` table
+  with per-user RLS policies, ready for Supabase Auth to move saves to the
+  cloud and sync across devices.
+- **Real photos.** Seed rows store a bare Unsplash id (proxied via wsrv.nl);
+  `photo()` passes any absolute `https://` URL straight through, so real
+  licensed/UGC photos work with no code change — just store full URLs.
+- **Real behavioral signals.** `pct` and `saves_week` (which drives trending)
+  start as seeded estimates; a real product backfills `saves_week` from actual
+  saves and recomputes on a schedule.
 
 ## Product stances (do not regress)
 
