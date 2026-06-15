@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Icon } from "../components/Icon";
 import { useSaves } from "./saves";
+import { WebAuth } from "./Auth";
 import { href, navigate, useRoute } from "./router";
 import { Browse } from "./Browse";
 import { DishPage } from "./DishPage";
@@ -10,7 +11,7 @@ import { SavedPage } from "./SavedPage";
 
 export default function App() {
   const route = useRoute();
-  const { saved, toggle } = useSaves();
+  const { saved, toggle, auth } = useSaves();
   const [query, setQuery] = useState("");
 
   const onSearch = (v: string) => {
@@ -53,6 +54,7 @@ export default function App() {
           <a className="w-navlink" href="./index.html" title="Open the iOS app demo">
             Get the app ↗
           </a>
+          <WebAuth auth={auth} />
         </div>
       </header>
 

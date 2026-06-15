@@ -10,6 +10,7 @@
 // Photos proxy Unsplash via wsrv.nl for the seed (direct Unsplash is often
 // rate-limited). Real rows carry their own absolute image URLs — see `photo()`.
 import type { Cuisine, Collection, Dish } from "./types";
+import { supabase } from "./lib/supabase";
 
 /**
  * Resolve a dish image to a URL.
@@ -144,9 +145,6 @@ export const byId = (id: string | null): Dish | undefined => DISHES.find((d) => 
  * Call once before the first render.
  */
 export async function hydrate(): Promise<void> {
-  // Cheap env check first so demo builds never pull in the Supabase client chunk.
-  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) return;
-  const { supabase } = await import("./lib/supabase");
   if (!supabase) return; // demo mode — keep the seed
 
   const [dishesRes, cuisinesRes, collectionsRes] = await Promise.all([

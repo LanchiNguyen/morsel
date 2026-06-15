@@ -270,6 +270,70 @@
 /* ---- empty state ---- */
 .w-empty { text-align: center; padding: 72px 24px; color: var(--ink-2); }
 
+/* ---- auth modal ---- */
+.w-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.w-modal-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 9, 4, 0.45);
+  cursor: pointer;
+}
+.w-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow-float);
+  padding: 26px 24px 22px;
+}
+.w-modal-card h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+.w-modal-card p { color: var(--ink-2); font-size: 14px; margin-bottom: 18px; }
+.w-modal-card input {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  background: var(--sunken);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.w-modal-card input:focus { outline: none; border-color: var(--accent); }
+.w-modal-msg { font-size: 13px; color: var(--ink-2); margin-bottom: 10px; }
+.w-modal-err { color: var(--accent); }
+.w-modal-submit {
+  width: 100%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 15px;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+}
+.w-modal-submit:disabled { opacity: 0.5; cursor: default; }
+.w-modal-switch {
+  display: block;
+  width: 100%;
+  text-align: center;
+  color: var(--ink-2);
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 14px;
+  cursor: pointer;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .morsel-web * { transition: none !important; }
 }

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Avatar } from "../components/Avatar";
 import { Icon, type IconName } from "../components/Icon";
 import { byId } from "../data";
+import { displayName, type AuthValue } from "../lib/auth";
 import type { Collection, Prefs } from "../types";
 
 interface ProfileScreenProps {
@@ -11,6 +12,9 @@ interface ProfileScreenProps {
   collections: Collection[];
   onRecalibrate: () => void;
   onOpenSaved: () => void;
+  auth: AuthValue;
+  onSignIn: () => void;
+  onSignOut: () => void;
 }
 
 function Row({ icon, label, value }: { icon: IconName; label: string; value: ReactNode }) {
@@ -28,8 +32,10 @@ function Row({ icon, label, value }: { icon: IconName; label: string; value: Rea
   );
 }
 
-export function ProfileScreen({ prefs, saved, onRecalibrate }: ProfileScreenProps) {
+export function ProfileScreen({ prefs, saved, onRecalibrate, auth, onSignIn, onSignOut }: ProfileScreenProps) {
   const picked = prefs?.picked || [];
+  const name = auth.user ? displayName(auth.user) : "Alex";
+  const subtitle = auth.user ? auth.user.email : `Shaw, DC · ${saved.size} dishes saved`;
   const tasteTags = [...new Set(picked.map((id) => byId(id)?.tag).filter(Boolean))];
   const fallbackTags = ["Sushi", "Pizza", "Noodles"];
   const tags = tasteTags.length ? (tasteTags as string[]) : fallbackTags;
@@ -39,12 +45,22 @@ export function ProfileScreen({ prefs, saved, onRecalibrate }: ProfileScreenProp
     <div className="m-screen m-fade" style={{ background: "var(--paper)" }}>
       <div className="m-scroll" style={{ padding: "64px 22px 120px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 26 }}>
-          <Avatar name="Alex" size={64} />
+          <Avatar name={name} size={64} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="m-title" style={{ fontSize: 26 }}>Alex</div>
-            <div className="m-caption" style={{ color: "var(--ink-2)", marginTop: 2 }}>Shaw, DC · {saved.size} dishes saved</div>
+            <div className="m-title" style={{ fontSize: 26, textTransform: "capitalize" }}>{name}</div>
+            <div className="m-caption" style={{ color: "var(--ink-2)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{subtitle}</div>
           </div>
         </div>
+
+        {auth.enabled && (
+          <button
+            className={auth.user ? "m-btn m-btn-quiet" : "m-btn m-btn-primary"}
+            style={{ width: "100%", marginBottom: 26 }}
+            onClick={auth.user ? onSignOut : onSignIn}
+          >
+            {auth.user ? "Sign out" : "Sign in to sync your saves"}
+          </button>
+        )}
 
         <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: "18px 16px", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>

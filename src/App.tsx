@@ -13,9 +13,12 @@ import { ProfileScreen } from "./screens/Profile";
 import { RestaurantScreen } from "./screens/Restaurant";
 import { SavedScreen } from "./screens/Saved";
 import { SearchScreen } from "./screens/Search";
+import { AuthSheet } from "./sheets/AuthSheet";
 import { FiltersSheet } from "./sheets/FiltersSheet";
 import { LocationSheet } from "./sheets/LocationSheet";
 import { SaveSheet } from "./sheets/SaveSheet";
+import { useAuth, signOut } from "./lib/auth";
+import { addCloudSave, removeCloudSave, fetchCloudSaves, mergeLocalSaves } from "./lib/cloudSaves";
 import type { Collection, Dish, Filters, Loc, Prefs, Screen, Tab } from "./types";
 
 const GRID_COLS = 2;
@@ -66,6 +69,8 @@ function MorselApp() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [loc, setLoc] = useState<Loc | null>(init.loc && typeof init.loc === "object" ? init.loc : null);
   const [locOpen, setLocOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const auth = useAuth();
   const appRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState<ZoomState | null>(null);
   const zoomTimer = useRef<number>(0);
@@ -87,6 +92,41 @@ function MorselApp() {
       JSON.stringify({ screen, dishId, tab, saved: [...saved], collections, prefs, colId, restName, returnTo, filters, loc }),
     );
   }, [screen, dishId, tab, saved, collections, prefs, colId, restName, returnTo, filters, loc]);
+
+  // On sign-in, merge this device's saves up to the account, then adopt the
+  // cloud set as the master (re-adding collection dishes to keep the invariant
+  // that every filed dish is also saved). Signed out, saves stay local.
+  const syncedUser = useRef<string | null>(null);
+  useEffect(() => {
+    if (!auth.enabled) return;
+    const u = auth.user?.id ?? null;
+    if (u === syncedUser.current) return;
+    syncedUser.current = u;
+    if (!u) return;
+    (async () => {
+      try {
+        const local = new Set(saved);
+        collections.forEach((c) => c.dishes.forEach((id) => local.add(id)));
+        await mergeLocalSaves([...local]);
+        const cloud = await fetchCloudSaves();
+        setSaved(() => {
+          const next = new Set(cloud);
+          collections.forEach((c) => c.dishes.forEach((id) => next.add(id)));
+          return next;
+        });
+      } catch (e) {
+        console.warn("[morsel] saves sync failed:", e);
+      }
+    })();
+    // saved/collections read once at sign-in time, deliberately not deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.enabled, auth.user]);
+
+  // Mirror a single save change to the cloud when signed in (no-op otherwise).
+  const syncSave = (id: string, add: boolean) => {
+    if (!auth.enabled || !auth.user) return;
+    (add ? addCloudSave(id) : removeCloudSave(id)).catch((e) => console.warn("[morsel] save sync failed:", e));
+  };
 
   const dish = byId(dishId);
   const col = collections.find((c) => c.id === colId);
@@ -118,8 +158,10 @@ function MorselApp() {
         return n;
       });
       setCollections((cs) => cs.map((c) => ({ ...c, dishes: c.dishes.filter((x) => x !== id) })));
+      syncSave(id, false);
     } else {
       setSaved((s) => new Set(s).add(id));
+      syncSave(id, true);
       setSaveToastId(id);
       window.clearTimeout(toastTimer.current);
       toastTimer.current = window.setTimeout(() => setSaveToastId(null), 3500);
@@ -136,11 +178,14 @@ function MorselApp() {
       }),
     );
     setSaved((s) => new Set(s).add(sheetDishId));
+    syncSave(sheetDishId, true);
   };
 
   const createCollection = (name: string) => {
     if (!sheetDishId) return;
     setCollections((cs) => [...cs, { id: "c" + Date.now(), name, dishes: [sheetDishId] }]);
+    setSaved((s) => new Set(s).add(sheetDishId));
+    syncSave(sheetDishId, true);
   };
 
   const goTab = (k: Tab) => {
@@ -196,7 +241,7 @@ function MorselApp() {
       />
     );
   } else if (screen === "profile") {
-    content = <ProfileScreen prefs={prefs} saved={saved} collections={collections} onRecalibrate={() => setScreen("onboarding")} onOpenSaved={() => goTab("saved")} />;
+    content = <ProfileScreen prefs={prefs} saved={saved} collections={collections} onRecalibrate={() => setScreen("onboarding")} onOpenSaved={() => goTab("saved")} auth={auth} onSignIn={() => setAuthOpen(true)} onSignOut={signOut} />;
   } else {
     content = (
       <FeedScreen
@@ -241,6 +286,7 @@ function MorselApp() {
             </button>
           </div>
         )}
+        {authOpen && <AuthSheet onClose={() => setAuthOpen(false)} />}
         {locOpen && <LocationSheet loc={loc} onChange={setLoc} onClose={() => setLocOpen(false)} />}
         {filtersOpen && <FiltersSheet filters={filters} onChange={setFilters} onClose={() => setFiltersOpen(false)} />}
         {sheetDishId && byId(sheetDishId) && (

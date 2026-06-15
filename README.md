@@ -67,12 +67,25 @@ is no server of our own to host.
    `vercel.json`) and set the same two env vars in Project → Settings →
    Environment Variables. Each push deploys.
 
+### Accounts & cloud saves
+
+When Supabase is configured, both surfaces show a sign-in control (Profile on
+the phone, the header on web) backed by **Supabase Auth** (email + password).
+Signed out, saves stay on the device in `localStorage` exactly as before.
+Signing in **merges** this device's saves into the account, then treats the
+cloud (`saved_dishes`, one row per user per dish, under per-user RLS) as the
+source of truth — so saves sync across devices and surfaces. Every save/unsave
+mirrors to the cloud in the background.
+
+> Supabase enables email confirmation by default — new accounts must click the
+> link before their first sign-in. Turn it off under Authentication → Providers
+> → Email if you want instant sign-up for testing.
+
+Still per-device for now: a user's **collections** (the saved set syncs; the
+grouping into collections does not yet).
+
 ### Next phase (designed for, not yet wired)
 
-- **Accounts + cloud saves.** Saves/collections persist to `localStorage` today
-  (per-device). `supabase/schema.sql` already includes a `saved_dishes` table
-  with per-user RLS policies, ready for Supabase Auth to move saves to the
-  cloud and sync across devices.
 - **Real photos.** Seed rows store a bare Unsplash id (proxied via wsrv.nl);
   `photo()` passes any absolute `https://` URL straight through, so real
   licensed/UGC photos work with no code change — just store full URLs.
