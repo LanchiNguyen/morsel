@@ -1,8 +1,8 @@
 // Morsel — 3-step onboarding: welcome / taste calibration / dietary.
 import { useState } from "react";
 import { Icon } from "../components/Icon";
-import { DIETS, byId, photo } from "../data";
-import type { Prefs } from "../types";
+import { DIETS, DISHES, byId, photo } from "../data";
+import type { Dish, Prefs } from "../types";
 
 function ObDots({ step }: { step: number }) {
   return (
@@ -74,7 +74,10 @@ interface ObTasteProps {
 }
 
 function ObTaste({ picked, setPicked, onNext, onBack }: ObTasteProps) {
-  const pool = TASTE_IDS.map((id) => byId(id)!).filter(Boolean);
+  // Prefer the curated seed order; with live (non-seed) data those ids won't
+  // resolve, so fall back to the first dishes in the live catalog.
+  const curated = TASTE_IDS.map((id) => byId(id)).filter((d): d is Dish => Boolean(d));
+  const pool = curated.length >= 6 ? curated : DISHES.slice(0, 18);
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const tags = [...new Set(picked.map((id) => byId(id)!.tag))];
   const enough = picked.length >= 4;

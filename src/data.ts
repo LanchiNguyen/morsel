@@ -10,7 +10,6 @@
 // Photos proxy Unsplash via wsrv.nl for the seed (direct Unsplash is often
 // rate-limited). Real rows carry their own absolute image URLs — see `photo()`.
 import type { Cuisine, Collection, Dish } from "./types";
-import { supabase } from "./lib/supabase";
 
 /**
  * Resolve a dish image to a URL.
@@ -138,75 +137,45 @@ export let TREND: Record<string, number> = SEED_TREND;
 
 export const byId = (id: string | null): Dish | undefined => DISHES.find((d) => d.id === id);
 
+interface CatalogResponse {
+  dishes?: Dish[];
+  cuisines?: Cuisine[];
+  collections?: Collection[];
+  trend?: Record<string, number>;
+  heroIds?: string[];
+}
+
 /**
- * Pull live data from Supabase, if configured, and replace the seed in place.
- * Safe to call unconditionally: with no project wired up it's a no-op, and any
- * fetch error leaves the seed intact (the app never shows an empty feed).
- * Call once before the first render.
+ * Pull the live catalog from the /api/dishes endpoint (Yelp-backed) and replace
+ * the seed in place. Safe to call unconditionally: if the endpoint is missing
+ * (local dev), errors, or returns nothing, the bundled seed stays put — so the
+ * app always renders. Call once before the first render.
+ *
+ * Override the endpoint origin with VITE_API_BASE (defaults to same-origin).
  */
 export async function hydrate(): Promise<void> {
-  if (!supabase) return; // demo mode — keep the seed
+  try {
+    const base = import.meta.env.VITE_API_BASE ?? "";
+    const res = await fetch(`${base}/api/dishes`, { headers: { accept: "application/json" } });
+    if (!res.ok || !res.headers.get("content-type")?.includes("application/json")) return;
 
-  const [dishesRes, cuisinesRes, collectionsRes] = await Promise.all([
-    supabase
-      .from("dishes")
-      .select("id,img,h,name,rest,hood,price,dist,walk,tag,pct,hero,hero_order,saves_week,reviews(who,img,text)"),
-    supabase.from("cuisines").select("key,label,img,sort").order("sort"),
-    supabase
-      .from("collections")
-      .select("id,name,sort,collection_dishes(dish_id,sort)")
-      .order("sort"),
-  ]);
+    const data = (await res.json()) as CatalogResponse;
+    if (!Array.isArray(data.dishes) || !data.dishes.length) return; // keep the seed
 
-  if (dishesRes.error) throw dishesRes.error;
-  const rows = dishesRes.data ?? [];
-  if (!rows.length) return; // empty DB — keep the seed rather than blank the app
-
-  DISHES = rows.map((r): Dish => ({
-    id: r.id,
-    img: r.img,
-    h: Number(r.h),
-    name: r.name,
-    rest: r.rest,
-    hood: r.hood,
-    price: r.price,
-    dist: r.dist,
-    walk: r.walk,
-    tag: r.tag,
-    pct: Number(r.pct),
-    reviews: ((r.reviews as { who: string; img: number; text: string }[] | null) ?? []).map((v) => ({
-      who: v.who,
-      img: Number(v.img),
-      text: v.text,
-    })),
-  }));
-
-  TREND = Object.fromEntries(rows.map((r) => [r.id, Number(r.saves_week) || 0]));
-
-  // Heroes: explicitly flagged rows by `hero_order`, else fall back to the
-  // five highest-trending dishes so the feed always has a hero rotation.
-  const flagged = rows
-    .filter((r) => r.hero)
-    .sort((a, b) => (Number(a.hero_order) || 0) - (Number(b.hero_order) || 0))
-    .map((r) => r.id);
-  HERO_IDS = flagged.length
-    ? flagged
-    : [...DISHES]
-        .sort((a, b) => (TREND[b.id] || 0) * (b.pct / 100) - (TREND[a.id] || 0) * (a.pct / 100))
-        .slice(0, 5)
-        .map((d) => d.id);
-
-  if (!cuisinesRes.error && cuisinesRes.data?.length) {
-    CUISINES = cuisinesRes.data.map((c): Cuisine => ({ key: c.key, label: c.label, img: c.img }));
-  }
-
-  if (!collectionsRes.error && collectionsRes.data?.length) {
-    DEFAULT_COLLECTIONS = collectionsRes.data.map((c): Collection => ({
-      id: c.id,
-      name: c.name,
-      dishes: ((c.collection_dishes as { dish_id: string; sort: number }[] | null) ?? [])
-        .sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0))
-        .map((cd) => cd.dish_id),
-    }));
+    DISHES = data.dishes;
+    TREND = data.trend ?? {};
+    if (data.cuisines?.length) CUISINES = data.cuisines;
+    // Editorial collections come from live data; default to none if absent so we
+    // don't show collections pointing at seed dishes that no longer exist.
+    DEFAULT_COLLECTIONS = data.collections ?? [];
+    HERO_IDS =
+      data.heroIds?.length && data.heroIds.every((id) => DISHES.some((d) => d.id === id))
+        ? data.heroIds
+        : [...DISHES]
+            .sort((a, b) => (TREND[b.id] || 0) * (b.pct / 100) - (TREND[a.id] || 0) * (a.pct / 100))
+            .slice(0, 5)
+            .map((d) => d.id);
+  } catch {
+    // Network/parse failure — the seed is already in place.
   }
 }
