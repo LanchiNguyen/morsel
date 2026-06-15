@@ -1,0 +1,275 @@
+/* ============================================================
+   MORSEL WEB — desktop companion. Same "Toast" palette and type
+   as the app, re-laid-out for a wide window and shareable pages.
+   ============================================================ */
+
+.morsel-web {
+  --paper: #f7f1e6;
+  --surface: #fffcf5;
+  --sunken: #efe6d6;
+  --ink: #26190e;
+  --ink-2: rgba(38, 25, 14, 0.62);
+  --ink-3: rgba(38, 25, 14, 0.4);
+  --line: rgba(38, 25, 14, 0.1);
+  --accent: #c2492b;
+  --accent-ink: #fff6ec;
+  --glass: rgba(28, 18, 10, 0.34);
+  --glass-text: #fff9f0;
+  --font-display: "Lora", Georgia, serif;
+  --font-ui: "Hanken Grotesk", -apple-system, "SF Pro Text", sans-serif;
+  --shadow-card: 0 1px 2px rgba(38, 25, 14, 0.05), 0 10px 30px rgba(38, 25, 14, 0.1);
+  --shadow-float: 0 2px 6px rgba(38, 25, 14, 0.12), 0 16px 44px rgba(38, 25, 14, 0.2);
+  --wrap: 1180px;
+
+  font-family: var(--font-ui);
+  color: var(--ink);
+  background: var(--paper);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.morsel-web *,
+.morsel-web *::before,
+.morsel-web *::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+.morsel-web img { display: block; }
+.morsel-web button {
+  font-family: var(--font-ui);
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+.morsel-web a { color: inherit; text-decoration: none; }
+
+.w-wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 28px; }
+
+/* ---- type ---- */
+.w-display { font-family: var(--font-display); font-weight: 700; font-size: clamp(34px, 5vw, 60px); line-height: 1.02; letter-spacing: -0.015em; }
+.w-title   { font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 3vw, 38px); line-height: 1.08; letter-spacing: -0.01em; }
+.w-heading { font-family: var(--font-display); font-weight: 600; font-size: 24px; line-height: 1.15; }
+.w-micro   { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* ---- header ---- */
+.w-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(247, 241, 230, 0.86);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-bottom: 1px solid var(--line);
+}
+.w-header-in {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.w-brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 25px;
+  letter-spacing: -0.01em;
+  flex: none;
+}
+.w-loc { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-2); font-size: 14px; font-weight: 600; flex: none; }
+.w-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 16px;
+  height: 44px;
+}
+.w-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+}
+.w-navlink { font-size: 14px; font-weight: 700; color: var(--ink-2); flex: none; display: inline-flex; align-items: center; gap: 6px; }
+.w-navlink:hover { color: var(--ink); }
+.w-navlink[data-on="true"] { color: var(--accent); }
+
+/* ---- buttons / chips ---- */
+.w-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 15px;
+  min-height: 46px;
+  padding: 0 22px;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+.w-btn:active { transform: scale(0.98); }
+.w-btn-primary { background: var(--accent); color: var(--accent-ink); }
+.w-btn-quiet { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.w-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+.w-chip:hover { border-color: var(--ink-3); }
+.w-chip[data-on="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* ---- hero / editorial band ---- */
+.w-hero { padding: 40px 0 26px; }
+.w-hero-lead { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 24px; }
+.w-hero-lead p { color: var(--ink-2); font-size: 17px; line-height: 1.5; max-width: 440px; }
+.w-hero-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
+}
+.w-hero-sub { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 860px) {
+  .w-hero-grid { grid-template-columns: 1fr; }
+  .w-hero-sub { grid-template-columns: 1fr 1fr; }
+}
+
+.w-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--sunken);
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.w-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); }
+.w-card img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.w-card-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(12, 7, 3, 0.78) 0%, rgba(12, 7, 3, 0.2) 38%, rgba(12, 7, 3, 0) 58%);
+  pointer-events: none;
+}
+.w-hero-feature { aspect-ratio: 4 / 3.4; }
+.w-hero-tile { aspect-ratio: 1 / 1; }
+.w-card-text { position: absolute; left: 18px; right: 18px; bottom: 16px; color: #fff7eb; text-align: left; }
+
+/* ---- glass save heart over photos ---- */
+.w-heart {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass);
+  color: #fff7eb;
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  z-index: 2;
+}
+.w-heart[data-on="true"] { color: #ff8a65; }
+.w-glass-tag {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--glass);
+  color: var(--glass-text);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ---- browse toolbar ---- */
+.w-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 8px 0 22px;
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+}
+.w-tabs { display: flex; align-items: baseline; gap: 18px; }
+.w-tab { font-family: var(--font-display); font-weight: 600; font-size: 26px; color: var(--ink-3); transition: color 0.15s ease; }
+.w-tab[data-on="true"] { color: var(--ink); }
+.w-toolbar-spacer { flex: 1; }
+.w-result { color: var(--ink-3); font-size: 13px; font-weight: 600; }
+
+/* ---- masonry browse grid (CSS columns, denser on wide) ---- */
+.w-masonry { column-gap: 14px; column-count: 4; padding-bottom: 56px; }
+@media (max-width: 1080px) { .w-masonry { column-count: 3; } }
+@media (max-width: 760px) { .w-masonry { column-count: 2; } }
+@media (max-width: 460px) { .w-masonry { column-count: 1; } }
+.w-masonry .w-card { margin: 0 0 14px; break-inside: avoid; }
+
+/* ---- dish / restaurant page ---- */
+.w-page { padding: 32px 0 72px; }
+.w-back { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-weight: 700; font-size: 14px; margin-bottom: 22px; }
+.w-back:hover { color: var(--ink); }
+.w-detail { display: grid; grid-template-columns: 1.15fr 1fr; gap: 40px; align-items: start; }
+@media (max-width: 900px) { .w-detail { grid-template-columns: 1fr; gap: 24px; } }
+.w-detail-photo { width: 100%; border-radius: 24px; overflow: hidden; aspect-ratio: 4 / 3; background: var(--sunken); box-shadow: var(--shadow-card); }
+.w-detail-photo img { width: 100%; height: 100%; object-fit: cover; }
+.w-detail-info { position: sticky; top: 92px; }
+.w-stat-row { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+.w-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.w-review { display: flex; gap: 12px; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--line); }
+
+/* ---- restaurant stats ---- */
+.w-rstats { display: flex; gap: 12px; flex-wrap: wrap; }
+.w-rstat { flex: 1; min-width: 120px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; text-align: center; }
+
+/* ---- footer ---- */
+.w-footer { border-top: 1px solid var(--line); margin-top: 20px; }
+.w-footer-in {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 26px 28px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+/* ---- empty state ---- */
+.w-empty { text-align: center; padding: 72px 24px; color: var(--ink-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .morsel-web * { transition: none !important; }
+}
